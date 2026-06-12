@@ -1,0 +1,2 @@
+# gcal-tasks-deployer
+GoogleカレンダーとToDoリストのワンクリックデプロイツール。

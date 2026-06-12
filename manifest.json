@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "日历助手",
+  "version": "2.0",
+  "description": "截图识别，一键创建谷歌日历事件和待办事项（支持 Gemini / OpenAI / DeepSeek）",
+  "permissions": ["identity", "storage"],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://oauth2.googleapis.com/*",
+    "https://www.googleapis.com/*",
+    "https://tasks.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://api.deepseek.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "日历助手"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

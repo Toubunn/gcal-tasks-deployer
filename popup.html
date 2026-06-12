@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>日历助手</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 360px;
+      font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #fff;
+      color: #1f2937;
+      font-size: 13px;
+    }
+
+    /* ===== 顶栏 ===== */
+    .header {
+      background: linear-gradient(135deg, #4285f4, #3367d6);
+      color: white;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-title { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .login-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.4);
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: rgba(255,255,255,0.35); }
+    .logged-in-badge {
+      font-size: 11px;
+      background: rgba(255,255,255,0.15);
+      padding: 3px 8px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .dot { width:6px; height:6px; background:#4ade80; border-radius:50%; }
+
+    /* ===== 内容区 ===== */
+    .content { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* ===== 提示框 ===== */
+    .notice {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      color: #78350f;
+      line-height: 1.6;
+    }
+    .notice strong { display: block; margin-bottom: 4px; font-size: 12px; }
+    .notice code {
+      display: block;
+      background: #fef3c7;
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-top: 5px;
+      word-break: break-all;
+      font-size: 10.5px;
+      font-family: monospace;
+    }
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #b91c1c;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .success-box .icon { font-size: 36px; display: block; margin-bottom: 6px; }
+    .success-box .title { font-weight: 600; color: #166534; font-size: 14px; }
+    .success-box .detail { color: #4b7c5f; font-size: 12px; margin-top: 3px; }
+
+    /* ===== 粘贴区域 ===== */
+    .paste-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 10px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+      outline: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .paste-zone:hover, .paste-zone:focus { border-color: #4285f4; background: #eff6ff; }
+    .paste-zone .big-icon { font-size: 36px; }
+    .paste-zone .hint { color: #374151; font-size: 13px; font-weight: 500; }
+    .paste-zone .sub  { color: #9ca3af; font-size: 11px; }
+    .paste-zone img {
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    /* ===== 加载 ===== */
+    .loading {
+      text-align: center;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #6b7280;
+    }
+    .spinner {
+      width: 26px; height: 26px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #4285f4;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== 表单 ===== */
+    .form { display: flex; flex-direction: column; gap: 9px; }
+    .form-row { display: flex; flex-direction: column; gap: 3px; }
+    .form-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .form-row input, .form-row textarea {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      background: #fff;
+      color: #1f2937;
+    }
+    .form-row input:focus, .form-row textarea:focus { border-color: #4285f4; }
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-row textarea { resize: vertical; min-height: 56px; }
+
+    /* ===== 按钮 ===== */
+    .btn-primary {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 2px;
+    }
+    .btn-primary:hover { background: #3367d6; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; }
+    .btn-ghost {
+      background: none;
+      border: 1.5px solid #e5e7eb;
+      color: #6b7280;
+      padding: 7px;
+      border-radius: 7px;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: #9ca3af; color: #374151; }
+
+    .hidden { display: none !important; }
+
+    /* ===== 分区标题 / 分隔线 ===== */
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4285f4;
+      margin-top: 2px;
+    }
+    .section-title .tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9ca3af;
+      background: #f3f4f6;
+      padding: 1px 7px;
+      border-radius: 10px;
+      text-transform: none;
+    }
+    .divider {
+      border: none;
+      border-top: 1px dashed #e5e7eb;
+      margin: 6px 0;
+    }
+    .section-sub {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: -4px;
+    }
+
+    /* ===== 折叠面板通用样式（AI 模型 / 凭据设置） ===== */
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px; cursor: pointer; user-select: none;
+    }
+    .panel-label {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11.5px; font-weight: 600; color: #374151; flex: 1; min-width: 0;
+    }
+    .panel-toggle { color: #93c5fd; font-size: 10px; flex-shrink: 0; padding-left: 6px; }
+    .panel-body {
+      padding: 9px 14px 12px; border-top: 1px solid #dbeafe;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* ===== AI 模型设置面板 ===== */
+    .model-panel { background: #f0f4ff; border-bottom: 1px solid #dbeafe; }
+    .model-panel .panel-header:hover { background: #dbeafe; }
+    .model-panel .panel-body { background: #f8faff; }
+    .model-badge {
+      background: #bfdbfe; color: #1e40af; padding: 1px 8px;
+      border-radius: 10px; font-size: 10.5px; font-weight: 600;
+      max-width: 175px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ===== 凭据设置面板 ===== */
+    .cred-panel { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
+    .cred-panel .panel-header:hover { background: #fed7aa; }
+    .cred-panel .panel-body { background: #fffaf3; border-top: 1px solid #fed7aa; }
+    .cred-hint {
+      font-size: 11px; color: #9a6a3a; line-height: 1.5; margin-top: -2px;
+    }
+
+    /* ===== 通用下拉框 ===== */
+    .model-select {
+      border: 1.5px solid #dbeafe; border-radius: 7px; padding: 7px 8px;
+      font-size: 12px; width: 100%; outline: none; background: #fff;
+      color: #1f2937; font-family: inherit;
+    }
+    .model-select:focus { border-color: #4285f4; }
+
+    /* ===== API Key / Client ID/Secret 输入行 ===== */
+    .key-row { display: flex; gap: 6px; }
+    .key-row input {
+      flex: 1; border: 1.5px solid #e5e7eb; border-radius: 7px;
+      padding: 7px 10px; font-size: 12px; outline: none;
+      font-family: inherit; background: #fff; color: #1f2937;
+      min-width: 0;
+    }
+    .key-row input:focus { border-color: #4285f4; }
+    .btn-save-small {
+      flex-shrink: 0; padding: 7px 12px; border-radius: 7px;
+      font-size: 11.5px; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+      background: none; border: 1.5px solid #93c5fd; color: #1d4ed8;
+    }
+    .btn-save-small:hover { background: #dbeafe; }
+    .btn-save-small:disabled { color: #93c5fd; border-color: #dbeafe; cursor: not-allowed; }
+    .cred-panel .btn-save-small { border-color: #fdba74; color: #c2410c; }
+    .cred-panel .btn-save-small:hover { background: #fed7aa; }
+    .saved-hint { color: #16a34a; font-weight: 600; text-transform: none; font-size: 10px; }
+
+    /* ===== 获取列表 / 一键测试按钮 ===== */
+    .btn-fetch {
+      background: none; border: 1.5px solid #93c5fd; color: #1d4ed8;
+      padding: 6px 10px; border-radius: 7px; font-size: 11.5px;
+      cursor: pointer; width: 100%; font-family: inherit; transition: all 0.2s;
+    }
+    .btn-fetch:hover { background: #dbeafe; }
+    .btn-fetch:disabled { color: #93c5fd; border-color: #dbeafe; cursor: not-allowed; }
+    .btn-fetch.stopping { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+    .btn-fetch.stopping:hover { background: #fee2e2; }
+    .model-status { font-size: 11px; color: #6b7280; text-align: center; min-height: 14px; }
+
+    /* ===== 模型列表 ===== */
+    #model-list-area {
+      display: flex; flex-direction: column; gap: 6px;
+      max-height: 220px; overflow-y: auto;
+    }
+    .model-item {
+      border: 1.5px solid #e5e7eb; border-radius: 7px;
+      padding: 6px 8px; background: #fff; transition: border-color 0.2s, background 0.2s;
+    }
+    .model-item.selected { border-color: #4285f4; background: #eff6ff; }
+    .model-item-main { display: flex; align-items: center; gap: 7px; }
+    .model-status-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; flex-shrink: 0;
+    }
+    .model-status-dot.testing { background: #fbbf24; animation: pulse 0.9s ease-in-out infinite; }
+    .model-status-dot.pass { background: #22c55e; }
+    .model-status-dot.fail { background: #ef4444; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .model-name {
+      flex: 1; font-size: 12px; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .model-btns { display: flex; gap: 4px; flex-shrink: 0; }
+    .btn-test-single, .btn-select-model {
+      font-size: 11px; padding: 3px 8px; border-radius: 5px; cursor: pointer;
+      border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .btn-test-single:hover { border-color: #93c5fd; color: #1d4ed8; }
+    .btn-select-model { color: #1d4ed8; border-color: #93c5fd; font-weight: 600; }
+    .btn-select-model:hover { background: #dbeafe; }
+    .model-item.selected .btn-select-model { background: #4285f4; color: #fff; border-color: #4285f4; }
+    .btn-test-single:disabled, .btn-select-model:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ===== 模型错误信息行 ===== */
+    .model-error-row {
+      margin-top: 5px; display: flex; gap: 6px; align-items: flex-start;
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 7px;
+    }
+    .model-error-text {
+      flex: 1; font-size: 10.5px; color: #b91c1c; line-height: 1.4;
+      word-break: break-all; max-height: 60px; overflow-y: auto;
+    }
+    .btn-copy-error {
+      flex-shrink: 0; font-size: 10px; padding: 2px 7px; border-radius: 4px;
+      border: 1px solid #fca5a5; background: #fff; color: #b91c1c;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-copy-error:hover { background: #fee2e2; }
+  </style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="header">
+  <span class="header-title">📅 日历助手</span>
+  <div id="auth-area">
+    <button class="login-btn" id="login-btn">登录谷歌账号</button>
+  </div>
+</div>
+
+<!-- AI 模型设置面板 -->
+<div class="model-panel">
+  <div class="panel-header" id="model-panel-header">
+    <div class="panel-label">
+      <span>⚙️ AI 模型</span>
+      <span class="model-badge" id="model-current-name">未配置</span>
+    </div>
+    <span class="panel-toggle" id="model-toggle">▼</span>
+  </div>
+  <div class="panel-body hidden" id="model-panel-body">
+
+    <!-- 服务商切换 -->
+    <div class="form-row">
+      <span class="form-label">服务商</span>
+      <select class="model-select" id="provider-select">
+        <option value="gemini">Gemini（Google）</option>
+        <option value="openai">OpenAI</option>
+        <option value="deepseek">DeepSeek</option>
+      </select>
+    </div>
+
+    <!-- API Key -->
+    <div class="form-row">
+      <span class="form-label">API Key <span class="saved-hint" id="apikey-saved-hint"></span></span>
+      <div class="key-row">
+        <input type="password" id="api-key-input" placeholder="输入当前服务商的 API Key" autocomplete="off">
+        <button class="btn-save-small" id="btn-save-apikey">保存</button>
+      </div>
+    </div>
+
+    <!-- 获取模型列表 -->
+    <button class="btn-fetch" id="btn-fetch-models">🔍 获取模型列表</button>
+    <div id="model-fetch-status" class="model-status"></div>
+
+    <!-- 模型列表 -->
+    <div id="model-list-area" class="hidden"></div>
+
+    <!-- 一键顺序测试 -->
+    <button class="btn-fetch hidden" id="btn-test-all">⚡ 一键测试全部</button>
+  </div>
+</div>
+
+<!-- Google 凭据设置面板 -->
+<div class="cred-panel">
+  <div class="panel-header" id="cred-panel-header">
+    <div class="panel-label">
+      <span>🔑 Google 凭据设置</span>
+    </div>
+    <span class="panel-toggle" id="cred-toggle">▼</span>
+  </div>
+  <div class="panel-body hidden" id="cred-panel-body">
+    <div class="cred-hint">
+      在 Google Cloud Console 创建 OAuth 客户端（类型选择「Chrome 应用」或「Web 应用」），将下方 Client ID 和 Client Secret 填入并保存。
+    </div>
+    <div class="form-row">
+      <span class="form-label">Google Client ID</span>
+      <div class="key-row">
+        <input type="text" id="input-client-id" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off">
+        <button class="btn-save-small" id="btn-save-client-id">保存</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Google Client Secret</span>
+      <div class="key-row">
+        <input type="password" id="input-client-secret" placeholder="GOCSPX-..." autocomplete="off">
+        <button class="btn-save-small" id="btn-save-client-secret">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- 首次使用说明（配置重定向地址） -->
+  <div id="setup-notice" class="notice hidden">
+    <strong>⚙️ 首次使用：需添加一个地址</strong>
+    登录前，请先去 Google Cloud Console → 凭据 → 编辑你的 OAuth 客户端，在「已获授权的重定向 URI」中加入这个地址：
+    <code id="redirect-uri-text"></code>
+    添加后点保存，再回来点登录。
+  </div>
+
+  <!-- 错误提示 -->
+  <div id="error-box" class="error-box hidden"></div>
+
+  <!-- ============ 板块一：日历事件 ============ -->
+  <div class="section-title">📅 日历事件 <span class="tag">粘贴在这里 ↓</span></div>
+  <div class="section-sub">适合有明确开始/结束时间的事项，例如会议、约会</div>
+
+  <!-- 粘贴区域（日历） -->
+  <div id="paste-zone-cal" class="paste-zone" tabindex="0">
+    <div class="big-icon">🖼️</div>
+    <div class="hint">点这里，然后按 Ctrl+V 粘贴截图</div>
+    <div class="sub">截图后直接粘贴即可，支持 PNG / JPG</div>
+  </div>
+
+  <!-- 分析中（日历） -->
+  <div id="loading-cal" class="loading hidden">
+    <div class="spinner"></div>
+    <span>AI 正在识别截图内容…</span>
+  </div>
+
+  <!-- 事件表单 -->
+  <div id="event-form" class="form hidden">
+    <div class="form-row">
+      <span class="form-label">标题</span>
+      <input type="text" id="f-title" placeholder="事件标题">
+    </div>
+    <div class="form-row">
+      <span class="form-label">日期</span>
+      <input type="date" id="f-date">
+    </div>
+    <div class="form-row">
+      <span class="form-label">时间（开始 → 结束）</span>
+      <div class="time-grid">
+        <input type="time" id="f-start">
+        <input type="time" id="f-end">
+      </div>
+    </div>
+    <div class="form-row">
+      <span class="form-label">地点（可选）</span>
+      <input type="text" id="f-location" placeholder="">
+    </div>
+    <div class="form-row">
+      <span class="form-label">备注（可选）</span>
+      <textarea id="f-desc" placeholder=""></textarea>
+    </div>
+    <button id="create-btn" class="btn-primary">✅ 创建到谷歌日历</button>
+    <button id="reset-btn" class="btn-ghost">重新粘贴截图</button>
+  </div>
+
+  <!-- 成功（日历） -->
+  <div id="success-view-cal" class="success-box hidden">
+    <span class="icon">🎉</span>
+    <div class="title">事件已成功创建！</div>
+    <div id="success-detail-cal" class="detail"></div>
+    <button id="new-btn-cal" class="btn-ghost" style="margin-top:12px">继续添加下一个</button>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ============ 板块二：待办事项 ============ -->
+  <div class="section-title">✅ 待办事项 <span class="tag">粘贴在这里 ↓</span></div>
+  <div class="section-sub">适合没有具体时间段的事项，会加入谷歌待办清单，可打勾完成</div>
+
+  <!-- 粘贴区域（待办） -->
+  <div id="paste-zone-task" class="paste-zone" tabindex="0">
+    <div class="big-icon">📝</div>
+    <div class="hint">点这里，然后按 Ctrl+V 粘贴截图</div>
+    <div class="sub">截图后直接粘贴即可，支持 PNG / JPG</div>
+  </div>
+
+  <!-- 分析中（待办） -->
+  <div id="loading-task" class="loading hidden">
+    <div class="spinner"></div>
+    <span>AI 正在识别截图内容…</span>
+  </div>
+
+  <!-- 待办表单 -->
+  <div id="task-form" class="form hidden">
+    <div class="form-row">
+      <span class="form-label">标题</span>
+      <input type="text" id="t-title" placeholder="待办标题">
+    </div>
+    <div class="form-row">
+      <span class="form-label">截止日期（可选）</span>
+      <input type="date" id="t-due">
+    </div>
+    <div class="form-row">
+      <span class="form-label">备注（可选）</span>
+      <textarea id="t-notes" placeholder=""></textarea>
+    </div>
+    <button id="create-task-btn" class="btn-primary">✅ 添加到待办清单</button>
+    <button id="reset-task-btn" class="btn-ghost">重新粘贴截图</button>
+  </div>
+
+  <!-- 成功（待办） -->
+  <div id="success-view-task" class="success-box hidden">
+    <span class="icon">🎉</span>
+    <div class="title">待办事项已添加！</div>
+    <div id="success-detail-task" class="detail"></div>
+    <button id="new-btn-task" class="btn-ghost" style="margin-top:12px">继续添加下一个</button>
+  </div>
+
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
